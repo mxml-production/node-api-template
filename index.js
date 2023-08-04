@@ -5,7 +5,7 @@ const PORT = process.env.PORT || 5000;
 const express = require('express');
 const cors = require('cors');
 
-const endpointsList = require('./src/utils/endpointsList');
+const endpointsList = require('./src/utils/EndpointsList');
 const connectDB = require('./src/config/database');
 
 const app = express();
