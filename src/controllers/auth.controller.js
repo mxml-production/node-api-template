@@ -100,12 +100,6 @@ class AuthController {
 
     static async logoutAll(req, res) {
         try {
-            const token = TokenManager.getHeaderToken(req);
-            if (!token) return res.status(400).json(errorResponse('Token not found', 'TOKEN_NOT_FOUND'));
-
-            const isValid = await TokenManager.verifyToken(token);
-            if (!isValid) return res.status(400).json(errorResponse('Invalid token', 'TOKEN_NOT_VALID'));
-
             await Token.deleteMany({ user: req.user._id });
             return res.status(200).json(successResponse('Logout successful', null));
         } catch (error) {
@@ -123,13 +117,15 @@ class AuthController {
     static async getSessions(req, res) {
         try {
             const tokens = await Token.find({ user: req.user._id }, { user: 0 });
-            for (let token of tokens) {
-                if (token.token === TokenManager.getHeaderToken(req)) token.current = true;
-                else token.current = false;
-                delete token.token;
-            }
+            const updatedTokens = tokens.map(token => {
+                if (token.token === TokenManager.getHeaderToken(req)) {
+                    return { ...token.toObject(), current: true, token: undefined };
+                } else {
+                    return { ...token.toObject(), current: false, token: undefined };
+                }
+            });
 
-            return res.status(200).json(successResponse('Sessions retrieved successfully', tokens));
+            return res.status(200).json(successResponse('Sessions retrieved successfully', updatedTokens));
         } catch (error) {
             console.error('❌', error.name);
             console.log(error)
@@ -155,13 +151,12 @@ class AuthController {
 
     static async deleteSession(req, res) {
         try {
-            const token = TokenManager.getHeaderToken(req);
+            const { id } = req.params;
+
+            const token = Token.findById(id);
             if (!token) return res.status(400).json(errorResponse('Token not found', 'TOKEN_NOT_FOUND'));
 
-            const isValid = await TokenManager.verifyToken(token);
-            if (!isValid) return res.status(400).json(errorResponse('Invalid token', 'TOKEN_NOT_VALID'));
-
-            await Token.deleteOne({ token });
+            await token.deleteOne();
             return res.status(200).json(successResponse('Session deleted successfully', null));
         } catch (error) {
             console.error('❌', error.name);
@@ -190,6 +185,19 @@ class AuthController {
 
             const { password, salt, ...rest } = user.toObject();
             return res.status(200).json(successResponse('Authenticated', { user: rest, token }));
+        } catch (error) {
+            console.error('❌', error.name);
+            return res.status(500).json(errorResponse('Internal Server Error', 'SERVER_ERROR'));
+        }
+    }
+
+    static async me(req, res) {
+        try {
+            const user = await User.findById(req.user._id).populate('role');
+            if (!user) return res.status(400).json(errorResponse('User not found', 'USER_NOT_FOUND'));
+
+            const { password, salt, ...rest } = user.toObject();
+            return res.status(200).json(successResponse('User retrieved successfully', rest));
         } catch (error) {
             console.error('❌', error.name);
             return res.status(500).json(errorResponse('Internal Server Error', 'SERVER_ERROR'));
