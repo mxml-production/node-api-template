@@ -133,22 +133,6 @@ class AuthController {
         }
     }
 
-    // /**
-    //  * @description Delete all sessions of a user
-    //  * @param {*} req
-    //  * @param {*} res
-    //  * @returns {object} response object
-    // */
-    // static async deleteSessions(req, res) {
-    //     try {
-    //         await Token.deleteMany({ user: req.user._id });
-    //         return res.status(200).json(successResponse('Sessions deleted successfully', null));
-    //     } catch (error) {
-    //         console.error('❌', error.name);
-    //         return res.status(500).json(errorResponse('Internal Server Error', 'SERVER_ERROR'));
-    //     }
-    // }
-
     static async deleteSession(req, res) {
         try {
             const { id } = req.params;

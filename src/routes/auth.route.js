@@ -14,6 +14,8 @@ router.get('/verify', AuthMiddleware.hasPermissions(['host', 'admin', 'user']), 
 router.get('/sessions', AuthMiddleware.hasPermissions(['host', 'admin', 'user']), AuthController.getSessions);
 router.delete('/sessions/:id', AuthMiddleware.hasPermissions(['host', 'admin', 'user']), AuthController.deleteSession);
 
+router.get('/me', AuthMiddleware.hasPermissions(['host', 'admin', 'user']), AuthController.me);
+
 router.get('/test', AuthMiddleware.hasPermissions(['host', 'admin']), AuthController.test);
 
 

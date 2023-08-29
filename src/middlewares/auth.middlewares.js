@@ -34,6 +34,7 @@ class AuthMiddleware {
                 return res.status(500).json(errorResponse('Internal Server Error', 'SERVER_ERROR'));
             }
         }
+
     }
 }
 
