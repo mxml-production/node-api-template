@@ -2,7 +2,7 @@ const router = require('express').Router();
 
 const AuthController = require('../controllers/auth.controller.js');
 
-const AuthMiddleware = require('../middlewares/auth.middlewares.js');
+const AuthMiddleware = require('../middlewares/auth.middleware.js');
 
 router.post('/register', AuthController.register);
 router.post('/login', AuthController.login);
@@ -15,8 +15,7 @@ router.get('/sessions', AuthMiddleware.hasPermissions(['host', 'admin', 'user'])
 router.delete('/sessions/:id', AuthMiddleware.hasPermissions(['host', 'admin', 'user']), AuthController.deleteSession);
 
 router.get('/me', AuthMiddleware.hasPermissions(['host', 'admin', 'user']), AuthController.me);
-
-router.get('/test', AuthMiddleware.hasPermissions(['host', 'admin']), AuthController.test);
+router.put('/me', AuthMiddleware.hasPermissions(['host', 'admin', 'user']), AuthController.updateMe);
 
 
 // router.post('/logout', authMiddleware, authController.logout);

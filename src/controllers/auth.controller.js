@@ -1,24 +1,19 @@
 const bcrypt = require('bcryptjs');
-const yup = require('yup');
 
 const { User, Role, Token } = require('../models');
 
-const { errorResponse, successResponse } = require('../utils/Response.js');
 const TokenManager = require('../utils/TokenManager.js');
+const ValidationManager = require('../utils/ValidationManager.js');
+const { errorResponse, successResponse } = require('../utils/Response.js');
+const { AuthValidation } = require('../validations');
 
 class AuthController {
-    /**
-     * @description Register a new user
-     * @param {*} req
-     * @param {*} res
-     * @returns {object} response object
-    */
     static async register(req, res) {
         try {
-            const { error } = await schemas.register.validate(req.body);
-            if (error) return res.status(400).json(errorResponse(error.message, 'VALIDATION_ERROR'));
+            const { data, valid, errors } = await ValidationManager(AuthValidation.register, req.body);
+            if (!valid) return res.status(400).json(errorResponse(errors[0], 'VALIDATION_ERROR'));
 
-            const { firstname, lastname, email, password } = req.body;
+            const { firstname, lastname, email, password } = data;
 
             const userExist = await User.findOne({ email });
             if (userExist) return res.status(400).json(errorResponse('User already exists', 'USER_EXISTS'));
@@ -33,25 +28,17 @@ class AuthController {
 
             return res.status(201).json(successResponse('User created successfully', user));
         } catch (error) {
-            if (error.name === 'ValidationError') return res.status(400).json(errorResponse(error.message, 'VALIDATION_ERROR'));
-
-            console.error('❌', error.name);
+            console.error('❌', error);
             return res.status(500).json(errorResponse('Internal Server Error', 'SERVER_ERROR'));
         }
     }
 
-    /**
-     * @description Login a user
-     * @param {*} req
-     * @param {*} res
-     * @returns {object} response object
-    */
     static async login(req, res) {
         try {
-            const { error } = await schemas.login.validate(req.body);
-            if (error) return res.status(400).json(errorResponse(error.message, 'VALIDATION_ERROR'));
+            const { data, valid, errors } = await ValidationManager(AuthValidation.login, req.body);
+            if (!valid) return res.status(400).json(errorResponse(errors[0], 'VALIDATION_ERROR'));
 
-            const { email, password } = req.body;
+            const { email, password } = data;
 
             const user = await User.findOne({ email }).populate('role');
             if (!user) return res.status(400).json(errorResponse('Invalid credentials', 'INVALID_CREDENTIALS'));
@@ -69,19 +56,11 @@ class AuthController {
 
             return res.status(200).json(successResponse('Login successful', { user: rest, token: token.token }));
         } catch (error) {
-            if (error.name === 'ValidationError') return res.status(400).json(errorResponse(error.message, 'VALIDATION_ERROR'));
-
-            console.error('❌', error.name);
+            console.error('❌', error);
             return res.status(500).json(errorResponse('Internal Server Error', 'SERVER_ERROR'));
         }
     }
 
-    /**
-     * @description Logout a user
-     * @param {*} req
-     * @param {*} res
-     * @returns {object} response object
-    */
     static async logout(req, res) {
         try {
             const token = TokenManager.getHeaderToken(req);
@@ -93,7 +72,7 @@ class AuthController {
             await Token.deleteOne({ token });
             return res.status(200).json(successResponse('Logout successful', null));
         } catch (error) {
-            console.error('❌', error.name);
+            console.error('❌', error);
             return res.status(500).json(errorResponse('Internal Server Error', 'SERVER_ERROR'));
         }
     }
@@ -103,17 +82,11 @@ class AuthController {
             await Token.deleteMany({ user: req.user._id });
             return res.status(200).json(successResponse('Logout successful', null));
         } catch (error) {
-            console.error('❌', error.name);
+            console.error('❌', error);
             return res.status(500).json(errorResponse('Internal Server Error', 'SERVER_ERROR'));
         }
     }
 
-    /**
-     * @description Get all sessions of a user
-     * @param {*} req
-     * @param {*} res
-     * @returns {object} response object
-    */
     static async getSessions(req, res) {
         try {
             const tokens = await Token.find({ user: req.user._id }, { user: 0 });
@@ -127,8 +100,7 @@ class AuthController {
 
             return res.status(200).json(successResponse('Sessions retrieved successfully', updatedTokens));
         } catch (error) {
-            console.error('❌', error.name);
-            console.log(error)
+            console.error('❌', error);
             return res.status(500).json(errorResponse('Internal Server Error', 'SERVER_ERROR'));
         }
     }
@@ -143,7 +115,7 @@ class AuthController {
             await token.deleteOne();
             return res.status(200).json(successResponse('Session deleted successfully', null));
         } catch (error) {
-            console.error('❌', error.name);
+            console.error('❌', error);
             return res.status(500).json(errorResponse('Internal Server Error', 'SERVER_ERROR'));
         }
     }
@@ -170,7 +142,7 @@ class AuthController {
             const { password, salt, ...rest } = user.toObject();
             return res.status(200).json(successResponse('Authenticated', { user: rest, token }));
         } catch (error) {
-            console.error('❌', error.name);
+            console.error('❌', error);
             return res.status(500).json(errorResponse('Internal Server Error', 'SERVER_ERROR'));
         }
     }
@@ -183,41 +155,37 @@ class AuthController {
             const { password, salt, ...rest } = user.toObject();
             return res.status(200).json(successResponse('User retrieved successfully', rest));
         } catch (error) {
-            console.error('❌', error.name);
+            console.error('❌', error);
             return res.status(500).json(errorResponse('Internal Server Error', 'SERVER_ERROR'));
         }
     }
 
-    /**
-     * @description Test route
-     * @param {*} req
-     * @param {*} res
-     * @returns {object} response object
-    */
-    static async test(req, res) {
+    static async updateMe(req, res) {
         try {
-            return res.status(200).json(successResponse('Test successful', req.user));
+            const { data, valid, errors } = await ValidationManager(AuthValidation.updateMe, req.body);
+            if (!valid) return res.status(400).json(errorResponse(errors[0], 'VALIDATION_ERROR'));
+
+            const { password } = data;
+            if (password) {
+                const salt = await bcrypt.genSalt(10);
+                const hashedPassword = await bcrypt.hash(password, salt);
+                data.password = hashedPassword;
+                data.salt = salt;
+            }
+
+            if (data.role) {
+                const role = await Role.find({ name: data.role });
+                if (!role) return res.status(400).json(errorResponse('Role not found', 'ROLE_NOT_FOUND'));
+                data.role = role._id;
+            }
+
+            await User.findByIdAndUpdate(req.user._id, data);
+            return res.status(200).json(successResponse('User updated successfully', null));
         } catch (error) {
-            console.error('❌', error.name);
+            console.error('❌', error);
             return res.status(500).json(errorResponse('Internal Server Error', 'SERVER_ERROR'));
         }
     }
-}
-
-const schemas = {
-    register: yup.object().shape({
-        firstname: yup.string().required().min(3).max(20),
-        lastname: yup.string().required().min(3).max(20),
-        email: yup.string().required().email(),
-        password: yup.string().required().min(6).max(20)
-    }),
-    login: yup.object().shape({
-        email: yup.string().required().email(),
-        password: yup.string().required().min(6).max(20)
-    }),
-    deleteSession: yup.object().shape({
-        id: yup.string().required()
-    })
 }
 
 module.exports = AuthController;

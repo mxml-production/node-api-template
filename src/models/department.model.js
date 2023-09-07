@@ -1,13 +1,11 @@
 const mongoose = require('mongoose');
 
-const countrySchema = new mongoose.Schema({
+const departmentSchema = new mongoose.Schema({
     name: {
         type: String,
         required: true,
         trim: true,
         lowercase: true,
-        min: 3,
-        max: 20
     },
     slug: {
         type: String,
@@ -15,9 +13,12 @@ const countrySchema = new mongoose.Schema({
         trim: true,
         lowercase: true,
         unique: true,
-        min: 3,
-        max: 20
     },
+    region: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Region',
+        required: true
+    }
 });
 
-module.exports = mongoose.model('Country', countrySchema);
+const Department = mongoose.model('Department', departmentSchema);

@@ -1,8 +1,10 @@
-const yup = require('yup');
 const bcrypt = require('bcryptjs');
 
 const { User, Role } = require('../models');
+
+const ValidationManager = require('../utils/ValidationManager');
 const { successResponse, errorResponse } = require('../utils/Response');
+const { UserValidation } = require('../validations');
 
 class UserController {
   static async getAll(req, res) {
@@ -19,7 +21,6 @@ class UserController {
       return res.status(200).json(successResponse('Users retrieved successfully', cleanUsers));
     } catch (error) {
       console.error('❌', error);
-      console.error('❌', error.name);
       return res.status(500).json(errorResponse('Internal Server Error', 'SERVER_ERROR'));
     }
   }
@@ -37,41 +38,36 @@ class UserController {
 
       return res.status(200).json(successResponse('User retrieved successfully', cleanUser));
     } catch (error) {
-      console.error('❌', error.name);
+      console.error('❌', error);
       return res.status(500).json(errorResponse('Internal Server Error', 'SERVER_ERROR'));
     }
   }
 
   static async create(req, res) {
     try {
-      let validatedData;
-      try {
-        validatedData = await schemas.create.validate(req.body, { abortEarly: false, stripUnknown: true });
-      } catch (error) {
-        return res.status(400).json(errorResponse(error.message, 'VALIDATION_ERROR'));
-      }
+      const { data, valid, errors } = await ValidationManager(UserValidation.create, req.body);
+      if (!valid) return res.status(400).json(errorResponse(errors[0], 'VALIDATION_ERROR'));
 
-      const userExists = await User.findOne({ email: validatedData.email });
+      const userExists = await User.findOne({ email: data.email });
       if (userExists) return res.status(400).json(errorResponse('User already exists', 'USER_ALREADY_EXISTS'));
 
       const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(validatedData.password, salt);
+      const hashedPassword = await bcrypt.hash(data.password, salt);
 
-      const role = await Role.findOne({ name: validatedData.role });
+      const role = await Role.findOne({ name: data.role });
       if (!role) return res.status(400).json(errorResponse('Invalid role', 'INVALID_ROLE'));
 
-      validatedData.role = role._id;
-      validatedData.password = hashedPassword;
-      validatedData.salt = salt;
+      data.role = role._id;
+      data.password = hashedPassword;
+      data.salt = salt;
 
-      const user = await User.create(validatedData);
+      const user = await User.create(data);
       const cleanUser = user.toObject();
       delete cleanUser.password; delete cleanUser.salt; delete cleanUser.__v;
 
       return res.status(201).json(successResponse('User created successfully', cleanUser));
     } catch (error) {
       console.log('❌', error);
-      console.error('❌', error.name);
       return res.status(500).json(errorResponse('Internal Server Error', 'SERVER_ERROR'));
     }
   }
@@ -80,25 +76,28 @@ class UserController {
     try {
       const { id } = req.params;
 
-      let validatedData;
-      try {
-        validatedData = await schemas.update.validate(req.body, { abortEarly: false, stripUnknown: true });
-      } catch (error) {
-        return res.status(400).json(errorResponse(error.message, 'VALIDATION_ERROR'));
+      const { data, valid, errors } = await ValidationManager(UserValidation.update, req.body);
+      if (!valid) return res.status(400).json(errorResponse(errors[0], 'VALIDATION_ERROR'));
+
+      if (data.email) {
+        const isEmailExist = await User.findOne({ email: data.email });
+        if (isEmailExist && isEmailExist._id.toString() !== id) return res.status(400).json(errorResponse('Email already exists', 'EMAIL_ALREADY_EXISTS'));
       }
 
-      const role = await Role.findOne({ name: validatedData.role });
-      if (!role) return res.status(400).json(errorResponse('Invalid role', 'INVALID_ROLE'));
-      validatedData.role = role._id;
+      if (data.role) {
+        const role = await Role.findOne({ name: data.role });
+        if (!role) return res.status(400).json(errorResponse('Invalid role', 'INVALID_ROLE'));
+        data.role = role._id;
+      }
 
-      if (validatedData.password) {
+      if (data.password) {
         const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(validatedData.password, salt);
-        validatedData.password = hashedPassword;
-        validatedData.salt = salt;
+        const hashedPassword = await bcrypt.hash(data.password, salt);
+        data.password = hashedPassword;
+        data.salt = salt;
       }
 
-      const user = await User.findByIdAndUpdate(id, validatedData);
+      const user = await User.findByIdAndUpdate(id, data);
       if (!user) return res.status(404).json(errorResponse('User not found', 'USER_NOT_FOUND'));
 
       const cleanUser = user.toObject();
@@ -107,7 +106,7 @@ class UserController {
 
       return res.status(200).json(successResponse('User updated successfully', cleanUser));
     } catch (error) {
-      console.error('❌', error.name);
+      console.error('❌', error);
       return res.status(500).json(errorResponse('Internal Server Error', 'SERVER_ERROR'));
     }
   }
@@ -121,27 +120,10 @@ class UserController {
 
       return res.status(200).json(successResponse('User deleted successfully', user));
     } catch(error) {
-      console.error('❌', error.name);
+      console.error('❌', error);
       return res.status(500).json(errorResponse('Internal Server Error', 'SERVER_ERROR'));
     }
   }
-}
-
-const schemas = {
-  create: yup.object().shape({
-    firstname: yup.string().required().min(3).max(20).lowercase().trim(),
-    lastname: yup.string().required().min(3).max(20).lowercase().trim(),
-    email: yup.string().email().required().trim().lowercase(),
-    password: yup.string().required().min(6).max(20),
-    role: yup.string().oneOf(['user', 'host', 'admin']).required(),
-  }),
-  update: yup.object().shape({
-    firstname: yup.string().min(3).max(20).lowercase().trim(),
-    lastname: yup.string().min(3).max(20).lowercase().trim(),
-    email: yup.string().email().trim().lowercase(),
-    password: yup.string().min(6).max(20),
-    role: yup.string().oneOf(['user', 'host', 'admin']),
-  }),
 }
 
 module.exports = UserController;
