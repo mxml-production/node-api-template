@@ -6,17 +6,14 @@ mongoose.plugin(mongooseSlugUpdater);
 const establishmentSchema = new mongoose.Schema({
     name: {
         type: String,
-        required: true,
-        trim: true,
-        lowercase: true,
-        min: 3,
-        max: 20
+        required: true
     },
     description: {
         type: String,
-        required: true,
-        trim: true,
+        required: true
     },
+    cover: String,
+    images: [String],
     slug: {
         type: String,
         slug: 'name',
@@ -25,57 +22,35 @@ const establishmentSchema = new mongoose.Schema({
     address: {
         type: String,
         required: true,
-        trim: true,
-        lowercase: true,
-        min: 3,
-        max: 20
     },
-    zipCode: {
-        type: String,
-        required: true,
-        trim: true,
-        lowercase: true,
-        min: 3,
-        max: 20
+    latitude: {
+        type: Number,
+        required: true
+    },
+    longitude: {
+        type: Number,
+        required: true
     },
     phone: {
         type: String,
         required: true,
-        trim: true,
-        lowercase: true,
-        min: 3,
-        max: 20
+        min: 10,
+        max: 10
     },
+    link: String,
     email: {
         type: String,
-        required: true,
-        trim: true,
-        lowercase: true
+        required: true
     },
-    price: {
+    minPrice: {
         type: Number,
         required: true,
-        trim: true,
-        lowercase: true
+        min: 1
     },
-    timeZone: {
-        type: String,
+    maxPrice: {
+        type: Number,
         required: true,
-        trim: true,
-        lowercase: true
-    },
-    language: {
-        type: String,
-        required: true,
-        trim: true,
-        lowercase: true
-    },
-    currency: {
-        type: String,
-        required: true,
-        trim: true,
-        lowercase: true,
-        default: 'EUR'
+        min: 1
     },
     visible: {
         type: Boolean,

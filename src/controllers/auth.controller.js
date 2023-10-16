@@ -1,10 +1,13 @@
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
 
 const { User, Role, Token } = require('../models');
 
 const TokenManager = require('../utils/TokenManager.js');
 const ValidationManager = require('../utils/ValidationManager.js');
+const FileManager = require('../utils/FileManager.js');
 const { errorResponse, successResponse } = require('../utils/Response.js');
+
 const { AuthValidation } = require('../validations');
 
 class AuthController {
@@ -177,6 +180,22 @@ class AuthController {
                 const role = await Role.find({ name: data.role });
                 if (!role) return res.status(400).json(errorResponse('Role not found', 'ROLE_NOT_FOUND'));
                 data.role = role._id;
+            }
+
+            if (req.files && req.files.profil) {
+                const { profil } = req.files;
+                const { file } = profil[0];
+
+                const isFileValid = FileManager.verifyFile(file.filename, { allowedExtensions: ['png', 'jpg', 'jpeg'], maxSize: 1024 * 1024 * 5 });
+                if (!isFileValid) {
+                    await FileManager.deleteFilesFromRequest(profil);
+                    return res.status(400).json(errorResponse('Invalid file', 'INVALID_FILE'));
+                }
+
+                const user = await User.findById(req.user._id);
+                if (user.profil) await FileManager.deleteFile(user.profil);
+
+                data.profil = file.filename;
             }
 
             await User.findByIdAndUpdate(req.user._id, data);

@@ -8,12 +8,15 @@ const cors = require('cors');
 const endpointsList = require('./src/utils/EndpointsList');
 const connectDB = require('./src/config/database');
 
+const { limiter } = require('./src/middlewares/rate-limiter.middleware');
+
 const app = express();
 
 connectDB();
 
 app.use(cors());
 app.use(express.json());
+app.use(limiter)
 
 app.use('/api', require('./src/routes'));
 

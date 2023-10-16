@@ -14,6 +14,12 @@ const citySchema = new mongoose.Schema({
         lowercase: true,
         unique: true,
     },
+    zipCode: {
+        type: String,
+        required: true,
+        trim: true,
+        lowercase: true,
+    },
     department: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Department',
@@ -21,4 +27,4 @@ const citySchema = new mongoose.Schema({
     }
 });
 
-const City = mongoose.model('City', citySchema);
+module.exports = mongoose.model('City', citySchema);

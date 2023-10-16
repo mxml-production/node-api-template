@@ -24,6 +24,12 @@ const userSchema = new mongoose.Schema({
         unique: true,
         lowercase: true
     },
+    phone: {
+        type: String
+    },
+    address: {
+        type: String
+    },
     salt: {
         type: String,
         required: true
@@ -33,20 +39,14 @@ const userSchema = new mongoose.Schema({
         trim: true,
         required: true
     },
-    role: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Role',
-        required: true
-    },
-    phone: {
-        type: String
-    },
-    address: {
-        type: String
-    },
     enabled: {
         type: Boolean,
         default: true,
+        required: true
+    },
+    role: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Role',
         required: true
     }
 }, { timestamps: true });

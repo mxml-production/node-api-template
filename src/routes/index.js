@@ -1,7 +1,5 @@
 const router = require('express').Router();
 
-const yup = require('yup');
-
 const authRoutes = require('./auth.route');
 const userRoutes = require('./user.route');
 const countryRoutes = require('./country.route');
