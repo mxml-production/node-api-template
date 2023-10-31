@@ -91,6 +91,8 @@ class EstablishmentController {
             const { data, valid, errors } = await ValidationManager(EstablishmentValidation.update, req.body);
             if (!valid) return res.status(400).json(errorResponse(errors[0], 'VALIDATION_ERROR'));
 
+            console.log(data);
+
             if (data.address) {
                 const request = await axios.get(`https://maps.googleapis.com/maps/api/geocode/json?address=${data.address.formattedAddress}&key=${process.env.GOOGLE_API_KEY}`);
                 const formatedData = formatedGoogleGeocodeResponse(request.data);
@@ -137,8 +139,10 @@ class EstablishmentController {
         }
     }
 
-    static async adressVerification(req, res) {
+    static async addressVerification(req, res) {
         try {
+            console.log(req.body)
+
             const request = await axios.get(`https://maps.googleapis.com/maps/api/geocode/json?address=${req.body.address}&key=${process.env.GOOGLE_API_KEY}`);
             const { data } = request;
 
